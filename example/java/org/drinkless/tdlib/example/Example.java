@@ -10,9 +10,10 @@ import org.drinkless.tdlib.Client;
 import org.drinkless.tdlib.Log;
 import org.drinkless.tdlib.TdApi;
 
-import java.io.Console;
 import java.io.IOError;
 import java.io.IOException;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.util.NavigableSet;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
@@ -50,14 +51,21 @@ public final class Example {
     private static final ConcurrentMap<Integer, TdApi.SupergroupFullInfo> supergroupsFullInfo = new ConcurrentHashMap<Integer, TdApi.SupergroupFullInfo>();
 
     private static final String newLine = System.getProperty("line.separator");
+    private static final String commandsLine = "Enter command (gcs - GetChats, gc <chatId> - GetChat, me - GetMe, sm <chatId> <message> - SendMessage, lo - LogOut, q - Quit): ";
+    private static volatile String currentPrompt = null;
 
     static {
         System.loadLibrary("tdjni");
     }
 
     private static void print(String str) {
-        System.out.println();
+        if (currentPrompt != null) {
+            System.out.println("");
+        }
         System.out.println(str);
+        if (currentPrompt != null) {
+            System.out.print(currentPrompt);
+        }
     }
 
     private static void setChatOrder(TdApi.Chat chat, long order) {
@@ -83,6 +91,7 @@ public final class Example {
         switch (Example.authorizationState.getConstructor()) {
             case TdApi.AuthorizationStateWaitTdlibParameters.CONSTRUCTOR:
                 TdApi.TdlibParameters parameters = new TdApi.TdlibParameters();
+                parameters.databaseDirectory = "tdlib";
                 parameters.useMessageDatabase = true;
                 parameters.useSecretChats = true;
                 parameters.apiId = 94575;
@@ -99,20 +108,17 @@ public final class Example {
                 client.send(new TdApi.CheckDatabaseEncryptionKey(), new AuthorizationRequestHandler());
                 break;
             case TdApi.AuthorizationStateWaitPhoneNumber.CONSTRUCTOR: {
-                Console console = System.console();
-                String phoneNumber = console.readLine("Please enter phone number: ");
+                String phoneNumber = promptString("Please enter phone number: ");
                 client.send(new TdApi.SetAuthenticationPhoneNumber(phoneNumber, false, false), new AuthorizationRequestHandler());
                 break;
             }
             case TdApi.AuthorizationStateWaitCode.CONSTRUCTOR: {
-                Console console = System.console();
-                String code = console.readLine("Please enter authentication code: ");
+                String code = promptString("Please enter authentication code: ");
                 client.send(new TdApi.CheckAuthenticationCode(code, "", ""), new AuthorizationRequestHandler());
                 break;
             }
             case TdApi.AuthorizationStateWaitPassword.CONSTRUCTOR: {
-                Console console = System.console();
-                String password = console.readLine("Please enter password: ");
+                String password = promptString("Please enter password: ");
                 client.send(new TdApi.CheckAuthenticationPassword(password), new AuthorizationRequestHandler());
                 break;
             }
@@ -162,8 +168,22 @@ public final class Example {
         return chatId;
     }
 
+    private static String promptString(String prompt) {
+        System.out.print(prompt);
+        currentPrompt = prompt;
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+        String str = "";
+        try {
+            str = reader.readLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        currentPrompt = null;
+        return str;
+    }
+
     private static void getCommand() {
-        String command = System.console().readLine("Enter command (gcs - GetChats, gc <chatId> - GetChat, me - GetMe, sm <chatId> <message> - SendMessage, lo - LogOut, q - Quit): ");
+        String command = promptString(commandsLine);
         String[] commands = command.split(" ", 2);
         try {
             switch (commands[0]) {
@@ -250,6 +270,7 @@ public final class Example {
                     System.out.println(chatId + ": " + chat.title);
                 }
             }
+            print("");
         }
     }
 
@@ -265,7 +286,7 @@ public final class Example {
     public static void main(String[] args) throws InterruptedException {
         // disable TDLib log
         Log.setVerbosityLevel(0);
-        if (!Log.setFilePath("log")) {
+        if (!Log.setFilePath("tdlib.log")) {
             throw new IOError(new IOException("Write access to the current directory is required"));
         }
 

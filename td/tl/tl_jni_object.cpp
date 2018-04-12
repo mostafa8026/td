@@ -79,7 +79,7 @@ void register_native_method(JNIEnv *env, jclass clazz, std::string name, std::st
 std::unique_ptr<JNIEnv, JvmThreadDetacher> get_jni_env(JavaVM *java_vm, jint jni_version) {
   JNIEnv *env = nullptr;
   if (java_vm->GetEnv(reinterpret_cast<void **>(&env), jni_version) == JNI_EDETACHED) {
-#ifdef JDK1_2 // if not Android JNI
+#ifdef JDK1_2  // if not Android JNI
     auto p_env = reinterpret_cast<void **>(&env);
 #else
     auto p_env = &env;
@@ -145,7 +145,7 @@ static void utf16_to_utf8(const jchar *p, jsize len, char *res) {
       *res++ = static_cast<char>(0x80 | ((cur >> 6) & 0x3f));
       *res++ = static_cast<char>(0x80 | (cur & 0x3f));
     } else {
-      // correctness already checked
+      // correctness is already checked
       unsigned int next = p[++i];
       unsigned int val = ((cur - 0xD800) << 10) + next - 0xDC00 + 0x10000;
 
